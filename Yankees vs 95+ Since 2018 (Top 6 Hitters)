@@ -1,0 +1,71 @@
+#Yankees Vs Rays
+library(tidyverse)
+library(baseballr)
+
+#Scraping Data for Judge, Lemahieu, Stanton, Urshela, Voit, Torres
+
+#Judge
+Judge1 <- scrape_statcast_savant_batter("2018-03-28", "2018-10-09", batterid = 592450)
+Judge2 <- scrape_statcast_savant_batter("2019-03-25", "2019-10-09", batterid = 592450)
+Judge3 <- scrape_statcast_savant_batter("2020-07-23", "2020-09-27", batterid = 592450)
+Judge <- rbind(Judge1, Judge2, Judge3)
+# Stanton 
+Stanton1 <- scrape_statcast_savant_batter("2018-03-28", "2018-10-09", batterid = 519317)
+Stanton2 <- scrape_statcast_savant_batter("2019-03-25", "2019-10-09", batterid = 519317)
+Stanton3 <- scrape_statcast_savant_batter("2020-07-23", "2020-09-27", batterid = 519317)
+Stanton <- rbind(Stanton1, Stanton2, Stanton3)
+# Lemahieu
+Lemahieu1 <- scrape_statcast_savant_batter("2018-03-28", "2018-10-09", batterid = 518934)
+Lemahieu2 <- scrape_statcast_savant_batter("2019-03-25", "2019-10-09", batterid = 518934)
+Lemahieu3 <- scrape_statcast_savant_batter("2020-07-23", "2020-09-27", batterid = 518934)
+Lemahieu <- rbind(Lemahieu1, Lemahieu2, Lemahieu3)
+# Urshela
+Urshela1 <- scrape_statcast_savant_batter("2018-03-28", "2018-10-09", batterid = 570482)
+Urshela2 <- scrape_statcast_savant_batter("2019-03-25", "2019-10-09", batterid = 570482)
+Urshela3 <- scrape_statcast_savant_batter("2020-07-23", "2020-09-27", batterid = 570482)
+Urshela <- rbind(Urshela1, Urshela2, Urshela3)
+# Voit
+Voit1 <- scrape_statcast_savant_batter("2018-03-28", "2018-10-09", batterid = 572228)
+Voit2 <- scrape_statcast_savant_batter("2019-03-25", "2019-10-09", batterid = 572228)
+Voit3 <- scrape_statcast_savant_batter("2020-07-23", "2020-09-27", batterid = 572228)
+Voit <- rbind(Voit1, Voit2, Voit3)
+# Torres
+Torres1 <- scrape_statcast_savant_batter("2018-03-28", "2018-10-09", batterid = 650402)
+Torres2 <- scrape_statcast_savant_batter("2019-03-25", "2019-10-09", batterid = 650402)
+Torres3 <- scrape_statcast_savant_batter("2020-07-23", "2020-09-27", batterid = 650402)
+Torres <- rbind(Torres1, Torres2, Torres3)
+# Yankees Top 6 Hitters
+Yankees <- rbind(Judge, Stanton, Lemahieu, Urshela, Voit, Torres)
+
+Yankees$woba_value <- as.numeric(Yankees$woba_value)
+Yankees$estimated_woba_using_speedangle <- as.numeric(Yankees$estimated_woba_using_speedangle)
+
+# Creating A Duplicate
+Yankees_Round <- Yankees
+#Rounding plate values to make a cleaner heat map
+Yankees_Round$plate_x_round <- round(Yankees_Round$plate_x/.25) * .25
+Yankees_Round$plate_z_round <- round(Yankees_Round$plate_z/.25) * .25
+
+# Filtering by K's Walks and Balls in Play on Pitches 95+
+Yankees_Round <- Yankees_Round %>% 
+  filter(release_speed >= 95) %>% 
+  filter(woba_value >= 0)
+# Getting the Data I need
+Yankees_Round <- Yankees_Round %>% 
+  group_by(plate_x_round, plate_z_round) %>% 
+  summarise(plate_x_round = plate_x_round,
+            plate_z_round = plate_z_round,
+            woba = mean(woba_value), 
+            xwoba = mean(estimated_woba_using_speedangle))
+# Getting a Frequency
+Freq_1 <- Yankees_Round %>% 
+  group_by(plate_x_round, plate_z_round) %>% 
+  summarise(Freq = n())
+# Combining
+Yankees_Round <- merge(Yankees_Round, Freq, by = c("plate_x_round", "plate_z_round"))
+#Graphing!
+ggplot(Yankees_Round, aes(x = plate_x_round, y = plate_z_round, color = woba)) + geom_point(aes(size = Freq)) +
+  scale_color_gradient2(midpoint = .375, low = "blue", mid = "grey",
+                        high = "red", space = "Lab" ) + geom_line(y = 3.4) + geom_line(y = 1.63) + geom_vline(xintercept = -.83) + geom_vline(xintercept = .83) + 
+  ggtitle("Yankees Top 6 Hitters wOBA on 95+ Pitches (2018-2020)")
+
